@@ -9,7 +9,6 @@
 #include <iostream>
 #include <fstream>
 #include "reading.h"
-#include <sstream>
 
 /** test parsing . */
 void testParsing (const std::string& file)
