@@ -69,7 +69,7 @@ bool isDataValid (std::string& s, std::list<double>& data)
             s[i] = ' ';
     }
     std::stringstream ss {s};
-    if (! isdigit(s.front()) && ! isdigit(s.back()))
+    if (! isdigit(s.front()) || ! isdigit(s.back()))
         return false;
     
     for (double d; ss >> d;)
