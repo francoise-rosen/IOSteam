@@ -62,7 +62,8 @@ bool isDataValid (std::string& s, std::list<double>& data)
 {
     for (int i = 0; i < s.length(); ++i)
     {
-        if ( std::find(Input::separators.begin(), Input::separators.end(), s[i]) != Input::separators.end())
+        // replace separators with whitespace
+        if ( ! isdigit(s[i]) && std::find(Input::separators.begin(), Input::separators.end(), s[i]) != Input::separators.end())
             s[i] = ' ';
     }
     std::stringstream ss {s};
