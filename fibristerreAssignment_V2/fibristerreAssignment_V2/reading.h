@@ -13,7 +13,6 @@
 #include <string>
 #include <list>
 #include <unordered_map>
-#include <map>
 #include <sstream>
 
 namespace Input
@@ -27,7 +26,7 @@ namespace Input
         {"switch", "\t-\tswap 2 measurements by index or by name. example:\n\t\tswitch 1 7 - swap measurements identified by indecies 1 and 7.\n\t\tswitch afx ae - swap measurements identified by names afx and ae.\n"},
         {"sort", "\t-\tsort measurements by name.\n"},
         {"to_txt", "\t-\twrite data to a txt file.\n\t\tMust be followed by the file's name.\n"},
-        {"from_txt", "\tread data from txt file into memory.\n\t\tMust be followed by the file's name.\n"},
+        {"from_txt", "\t-\tread data from txt file into memory.\n\t\tMust be followed by the file's name.\n"},
         {"quit", "\t-\tquit the application.\n"}
         
     };
