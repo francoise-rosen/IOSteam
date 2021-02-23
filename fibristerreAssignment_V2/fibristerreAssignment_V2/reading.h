@@ -18,17 +18,17 @@
 
 namespace Input
 {
-    static const std::map<std::string, std::string> commands
+    static const std::vector<std::pair<std::string, std::string>> commands
     {
-        {"display", "\t-\tdisplay all the possible user commands\n."},
-        {"enter", "\tenter a new measurement in form: \"name\" length d1;d2;..dn\n\tname must include at least one alpha character,\n\tdigits, or underscore.\n\tname must be unique. Length must be an integer.\n\tthe sequence of measurements (double precision float) must be separated by either ';' or ','\n\texample: \"confield\" 9 6.58;6.63;7.14\n"},
-        {"output", "\tprint all measurements.\n"},
-        {"remove", "\tremove measurement using name or index. example:\n\tremove 1 - removes the second entry\n\tremove afx - removes the entry with name \"afx\""},
-        {"switch", "\tswap 2 measurements by index or by name. example:\n\tswitch 1 7 - swap measurements identified by indecies 1 and 7.\n\tswitch afx ae - swap measurements identified by names afx and ae.\n"},
-        {"sort", "\tsort measurements by name.\n"},
-        {"to_txt", "\twrite data to a txt file. Followed by the file's name.\n"},
-        {"from_txt", "\tread data from txt file into memory. Followed by the file's name.\n"},
-        {"quit", "\tquit the application\n"}
+        {"display", "\t-\tdisplay all the possible user commands.\n"},
+        {"enter", "\t-\ttenter a new measurement in form: \"name\" length d1;d2;..dn\n\t\tname must include at least one alpha character,\n\t\tcan include digits, or underscore.\n\t\tname must be unique. Length must be an integer.\n\t\tthe sequence of measurements (double precision float)\n\t\tmust be separated by either ';' or ','\n\t\texample: \"confield\" 9 6.58;6.63;7.14\n"},
+        {"output", "\t-\tprint all measurements.\n"},
+        {"remove", "\t-\tremove measurement using name or index. example:\n\t\tremove 1 - removes the second entry\n\t\tremove afx - removes the entry with name \"afx\"\n"},
+        {"switch", "\t-\tswap 2 measurements by index or by name. example:\n\t\tswitch 1 7 - swap measurements identified by indecies 1 and 7.\n\t\tswitch afx ae - swap measurements identified by names afx and ae.\n"},
+        {"sort", "\t-\tsort measurements by name.\n"},
+        {"to_txt", "\t-\twrite data to a txt file.\n\t\tMust be followed by the file's name.\n"},
+        {"from_txt", "\tread data from txt file into memory.\n\t\tMust be followed by the file's name.\n"},
+        {"quit", "\t-\tquit the application.\n"}
         
     };
     static const std::vector<char> separators {';', ','};
@@ -198,9 +198,18 @@ public:
     {
         if (names.count (name) < 1)
             return false; // not found
-        typename std::vector<Reading>::iterator it;
+        typename std::vector<Reading>::iterator it = dataList.begin();
+        if (std::distance (it, it + names[name]) >= dataList.size())
+            return false;
         dataList.erase (it + names[name]);
         names.erase (name);
+        
+        // update names indecies
+        names.clear();
+        for (int i = 0; i < dataList.size(); ++i)
+        {
+            names[dataList[i].name] = i;
+        }
         return true;
     }
     
@@ -272,11 +281,11 @@ public:
     {
         std::sort(dataList.begin(), dataList.end(), [] (Reading r1, Reading r2) {return r1.name < r2.name;});
         // we need to renew indecies in names
+        names.clear();
         for (int i = 0; i < dataList.size(); ++i)
         {
             names[dataList[i].name] = i;
         }
-    
         assert (dataList.size() == names.size());
     }
     
