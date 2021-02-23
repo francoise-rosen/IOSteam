@@ -13,12 +13,24 @@
 #include <string>
 #include <list>
 #include <unordered_map>
+#include <map>
 #include <sstream>
 
 namespace Input
 {
-    static const std::vector<std::string> commands {"display", "enter", "output", "remove", "switch", "sort", "export_txt", "export_binary", "import_txt", "import_binary", "quit"};
-    enum key {Display, Enter, Output, Remove, Switch, Sort, ExportTXT, ExportBinary, ImportTXT, ImportBinary, Quit, numKeys};
+    static const std::map<std::string, std::string> commands
+    {
+        {"display", "\t-\tdisplay all the possible user commands\n."},
+        {"enter", "\tenter a new measurement in form: \"name\" length d1;d2;..dn\n\tname must include at least one alpha character,\n\tdigits, or underscore.\n\tname must be unique. Length must be an integer.\n\tthe sequence of measurements (double precision float) must be separated by either ';' or ','\n\texample: \"confield\" 9 6.58;6.63;7.14\n"},
+        {"output", "\tprint all measurements.\n"},
+        {"remove", "\tremove measurement using name or index. example:\n\tremove 1 - removes the second entry\n\tremove afx - removes the entry with name \"afx\""},
+        {"switch", "\tswap 2 measurements by index or by name. example:\n\tswitch 1 7 - swap measurements identified by indecies 1 and 7.\n\tswitch afx ae - swap measurements identified by names afx and ae.\n"},
+        {"sort", "\tsort measurements by name.\n"},
+        {"to_txt", "\twrite data to a txt file. Followed by the file's name.\n"},
+        {"from_txt", "\tread data from txt file into memory. Followed by the file's name.\n"},
+        {"quit", "\tquit the application\n"}
+        
+    };
     static const std::vector<char> separators {';', ','};
     constexpr static std::int32_t max_name_len = 10;
     constexpr static std::size_t max_size = 20;
@@ -62,8 +74,7 @@ bool isDataValid (std::string& s, std::list<double>& data)
 {
     for (int i = 0; i < s.length(); ++i)
     {
-        // replace separators with whitespace
-        if ( ! isdigit(s[i]) && std::find(Input::separators.begin(), Input::separators.end(), s[i]) != Input::separators.end())
+        if ( ! isdigit (s[i]) && std::find(Input::separators.begin(), Input::separators.end(), s[i]) != Input::separators.end())
             s[i] = ' ';
     }
     std::stringstream ss {s};
@@ -155,10 +166,20 @@ class Data
 {
 public:
     Data() {}
-    bool push (const Reading& r, bool append = false)
+    bool push (const Reading& r, bool replaceDuplicate = false)
     {
-        if ((! append) && (names.count (r.name) > 0))
+        if (names.count (r.name) > 0)
         {
+            if (replaceDuplicate)
+            {
+                // erase elem at r.name->second
+                // insert r
+                auto index = names.find (r.name)->second;
+                if (index >= dataList.size())
+                    throw std::runtime_error ("out of range");
+                dataList[index] = r;
+                return true;
+            }
             std::cout << "Name " << r.name << " already exists. Try another name.\n";
             return false;
         }
@@ -167,6 +188,7 @@ public:
             std::cout << "Max 20 entries for measurements allowed.\nYou have entered " << r.measurements.size() << '\n';
             return false;
         }
+           
         names[r.name] = static_cast<int> (dataList.size()); // set a new index for this measurement
         dataList.push_back (r);
         return true;
@@ -244,6 +266,18 @@ public:
     {
         assert (dataList.size() == names.size());
         return dataList.size();
+    }
+    
+    void sort()
+    {
+        std::sort(dataList.begin(), dataList.end(), [] (Reading r1, Reading r2) {return r1.name < r2.name;});
+        // we need to renew indecies in names
+        for (int i = 0; i < dataList.size(); ++i)
+        {
+            names[dataList[i].name] = i;
+        }
+    
+        assert (dataList.size() == names.size());
     }
     
 private:

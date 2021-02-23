@@ -33,7 +33,7 @@ void testParsing (const std::string& file)
                 break;
             }
             if (ss >> reading)
-                data.push (reading);
+                data.push (reading, true);
         }
     }
     if (word == "invalid")
@@ -91,9 +91,7 @@ void testTrim (const std::string& s)
     std::cout << "name validation tests passed\n";    
 }
 
-//==================================================================
-// FILE
-
+// test file I/O
 void exportToTxt (const std::string& fileName, const Data& data)
 {
     std::ofstream ofs {fileName};
@@ -128,6 +126,117 @@ void importFromTxt (const std::string& fileName, Data& data)
         throw std::runtime_error ("bad reading from txt");
 }
 
+//==================================================================
+// OPERATIONS
+
+bool enterMeasurement (std::istream& is, Data& data)
+{
+    Reading reading;
+    if (is >> reading)
+    {
+        data.push (reading);
+    }
+    else if (is.bad())
+        throw std::runtime_error ("Error with reading data. Termitating program.\n");
+    else
+    {
+        std::cout << "Failed to add this reading.\nPlease, try again.\n";
+    }
+    return true;
+}
+
+bool removeMeasurement (std::istream& is, Data& data)
+{
+    std::string temp;
+    if (is >> temp)
+    {
+        int index;
+        // check if remove by index or by name
+        auto isIndex = isInt (temp, index);
+        if (isIndex)
+        {
+            if (! data.remove (index))
+                throw ReadingError("Bad index, try again");
+            return true;
+        }
+        if (! data.remove (temp))
+            throw ReadingError("Bad index, try again");
+    }
+    return true;
+}
+
+bool swapMeasurements (std::istream& is, Data& data)
+{
+    std::string a, b;
+    if (! (is >> a >> b))
+        throw ReadingError ("Please enter 2 values to swap.\n");
+    int index1, index2;
+    if (isInt(a, index1) && isInt(b, index2))
+    {
+        if (! data.swap (index1, index2))
+            throw ReadingError("Bad index. Try again.\n");
+        return true;
+    }
+    if (! data.swap (a, b))
+        throw ReadingError("Bad index. Try again.\n");
+    return true;
+}
+
+bool exportToTxt (std::istream& is, Data& data)
+{
+    std::string fileName;
+    if (! (is >> fileName))
+        throw ("File name is missing");
+    std::ofstream ofs {fileName};
+    if (! ofs)
+        throw std::runtime_error ("Bad file");
+    for (int i = 0; i < data.size(); ++i)
+    {
+        ofs << data.getUnchecked (i) << '\n';
+    }
+    return true;
+}
+
+bool importFromTxt (std::istream& is, Data& data)
+{
+    std::string fileName;
+    if (! (is >> fileName))
+        throw ("File name is missing");
+    std::ifstream ifs {fileName};
+    if (! ifs)
+        throw std::runtime_error ("Bad file");
+    
+    // check if we should override duplicates.
+    bool replaceDuplicate = false;
+    if (! is.eof())
+    {
+        std::string temp;
+        is >> temp;
+        if (temp == "override")
+            replaceDuplicate = true;
+    }
+    
+    // read and place data into data container.
+    if (ifs.is_open())
+    {
+        std::string line;
+        while (std::getline (ifs, line))
+        {
+            Reading reading;
+            std::stringstream reading_stream {line};
+            if (reading_stream >> reading)
+            {
+                data.push (reading, replaceDuplicate);
+            }
+        }
+    }
+    
+    // failed to read till the end of the file
+    if (! ifs.eof())
+        throw std::runtime_error ("bad reading from txt");
+    return true;
+}
+
 //==========================================================================
 // INPUT
 
@@ -141,112 +250,46 @@ bool process (Data& readingsData)
     try
     {
         ss >> key;
-        if (key == Input::commands[Input::Display])
+        if (key == "display")
         {
-            for (int i = 1; i < Input::commands.size(); ++i)
-            {
-                std::cout << Input::commands[i] << '\n';
-            }
-            ss.ignore(1000);
+            for (auto p : Input::commands)
+                std::cout << p.first << p.second << '\n';
             return true;
         }
-        if (key == Input::commands[Input::Enter])
+        if (key == "enter")
         {
-            Reading reading;
-            if (ss >> reading)
-            {
-                readingsData.push (reading);
-            }
-            else if (ss.bad())
-                throw std::runtime_error ("Error with reading data. Termitating program.\n");
-            else
-            {
-                std::cout << "Failed to add this reading.\nPlease, try again.\n";
-            }
-            return true;
+            return enterMeasurement (ss, readingsData);
         }
-        if (key == Input::commands[Input::Remove])
+        if (key == "remove")
         {
-            std::string temp;
-            if (ss >> temp)
-            {
-                int index;
-                auto isIndex = isInt (temp, index);
-                if (isIndex)
-                {
-                    if (! readingsData.remove (index))
-                        throw ReadingError("Bad index, try again");
-                    return true;
-                }
-                if (! readingsData.remove (temp))
-                    throw ReadingError("Bad index, try again");
-            }
+            return removeMeasurement (ss, readingsData);
         }
-        if (key == Input::commands[Input::Quit])
+        if (key == "quit")
         {
             std::cout << "Closing programm...\n";
             return false;
         }
-        if (key == Input::commands[Input::Output])
+        if (key == "output")
         {
             readingsData.output();
             return true;
         }
-        if (key == Input::commands[Input::Switch])
+        if (key == "switch")
         {
-            std::string a, b;
-            if (! (ss >> a >> b))
-                throw ReadingError ("Please enter 2 values to swap.\n");
-            int index1, index2;
-            if (isInt(a, index1) && isInt(b, index2))
-            {
-                if (! readingsData.swap (index1, index2))
-                    throw ReadingError("Bad index. Try again.\n");
-                return true;
-            }
-            if (! readingsData.swap (a, b))
-                throw ReadingError("Bad index. Try again.\n");
+            return swapMeasurements (ss, readingsData);
+        }
+        if (key == "sort")
+        {
+            readingsData.sort();
             return true;
         }
-        if (key == Input::commands[Input::ExportTXT])
+        if (key == "to_txt")
         {
-            std::string fileName;
-            if (! (ss >> fileName))
-                throw ("File name is missing");
-            std::ofstream ofs {fileName};
-            if (! ofs)
-                throw std::runtime_error ("Bad file");
-            for (int i = 0; i < readingsData.size(); ++i)
-            {
-                ofs << readingsData.getUnchecked (i) << '\n';
-            }
-            return true;
+            return exportToTxt (ss, readingsData);
         }
-        if (key == Input::commands[Input::ImportTXT])
+        if (key == "from_txt")
         {
-            std::string fileName;
-            if (! (ss >> fileName))
-                throw ("File name is missing");
-            std::ifstream ifs {fileName};
-            if (! ifs)
-                throw std::runtime_error ("Bad file");
-            
-            if (ifs.is_open())
-            {
-                std::string line;
-                while (std::getline (ifs, line))
-                {
-                    Reading reading;
-                    std::stringstream ss {line};
-                    if (ss >> reading)
-                    {
-                        readingsData.push (reading);
-                    }
-                }
-            }
-            if (! ifs.eof())
-                throw std::runtime_error ("bad reading from txt");
-            return true;
+            return importFromTxt (ss, readingsData);
         }
         
         throw ReadingError ("Unknown keyword, please try again.\n");
@@ -254,7 +297,6 @@ bool process (Data& readingsData)
     catch (ReadingError& e)
     {
         std::cerr << e.what() << '\n';
-        return true;
     }
     return true;
 }
